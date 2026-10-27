@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
+    <PackageReference Include="OpenFga.Sdk" Version="0.10.4" />
   </ItemGroup>
 
 </Project>

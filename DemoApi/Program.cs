@@ -59,6 +59,19 @@ builder.Services.AddAuthorizationBuilder().AddQAuthPolicies();
 builder.Services.AddSingleton<IAuthorizationHandler, TenantRequirement>();
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, QAuthAuthorizationResultHandler>();
 
+// Data-level access (who can view, edit, share which portfolio) lives in OpenFGA. Without it the API
+// still starts, so /whoami and /admin/ping work, but every /portfolios call answers 503.
+var fga = builder.Configuration.GetSection("OpenFga").Get<OpenFgaOptions>() ?? new OpenFgaOptions();
+if (fga.IsConfigured)
+{
+    builder.Services.AddSingleton(OpenFgaPortfolioAccess.CreateClient(fga));
+    builder.Services.AddSingleton<IPortfolioAccess, OpenFgaPortfolioAccess>();
+}
+else
+{
+    builder.Services.AddSingleton<IPortfolioAccess, UnconfiguredPortfolioAccess>();
+}
+
 // Keep e-mail addresses like o'test2@… readable in responses (default encoder writes ' as ').
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
 
@@ -89,17 +102,16 @@ app.MapGet("/whoami", (HttpContext http) =>
     });
 }).RequireAuthorization();
 
-app.MapGet("/portfolios/{id}", (string id, HttpContext http) =>
-{
-    var tenant = QAuthClaims.From(http.User).Tenant;
-    // Another tenant's portfolio looks exactly like one that doesn't exist: 404, never 403.
-    return Portfolios.TryGet(id, out var p) && p.Tenant == tenant
-        ? Results.Ok(p)
-        : Results.NotFound();
-}).RequireAuthorization(QAuthPolicies.Tenant);
+app.MapPortfolios();
 
 app.MapGet("/admin/ping", () => Results.Ok(new { admin = true }))
     .RequireAuthorization(QAuthPolicies.Admin);
+
+if (!fga.IsConfigured)
+    app.Logger.LogWarning("OpenFGA is not configured (OpenFga__ApiUrl, OpenFga__StoreId): /portfolios answers 503.");
+else
+    app.Logger.LogInformation("OpenFGA: {ApiUrl}, store {StoreId}, model {ModelId}",
+        fga.ApiUrl, fga.StoreId, string.IsNullOrWhiteSpace(fga.AuthorizationModelId) ? "latest" : fga.AuthorizationModelId);
 
 app.Run();
 

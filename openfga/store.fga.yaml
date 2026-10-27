@@ -1,0 +1,70 @@
+# One file for both jobs:
+#   fga store import --file openfga/store.fga.yaml   creates a store with the model and the seed tuples
+#   fga model test   --tests openfga/store.fga.yaml  runs the tests below against the model
+name: qauth-demo-api
+model_file: ./model.fga
+
+# Seed: which tenant each portfolio belongs to (the same data as DemoApi/Portfolios.cs).
+# Grants to people are not seeded: they are made through the API (PUT /portfolios/{id}/access/{sub}).
+tuples:
+  - user: tenant:d3275653-4f23-4862-843d-9b8052d5f9af
+    relation: tenant
+    object: portfolio:acme-1
+  - user: tenant:00000000-0000-0000-0000-000000000001
+    relation: tenant
+    object: portfolio:other-1
+
+tests:
+  - name: grants and tenant admins
+    tuples:
+      - user: user:alice
+        relation: owner
+        object: portfolio:acme-1
+      - user: user:bob
+        relation: editor
+        object: portfolio:acme-1
+      - user: user:carol
+        relation: viewer
+        object: portfolio:acme-1
+      # In the API these come from the token as contextual tuples; stored here for the test.
+      - user: user:ada
+        relation: admin
+        object: tenant:d3275653-4f23-4862-843d-9b8052d5f9af
+      - user: user:otto
+        relation: admin
+        object: tenant:00000000-0000-0000-0000-000000000001
+    check:
+      - user: user:alice
+        object: portfolio:acme-1
+        assertions: {can_view: true, can_edit: true, can_share: true}
+      - user: user:bob
+        object: portfolio:acme-1
+        assertions: {can_view: true, can_edit: true, can_share: false}
+      - user: user:carol
+        object: portfolio:acme-1
+        assertions: {can_view: true, can_edit: false, can_share: false}
+      - user: user:dave
+        object: portfolio:acme-1
+        assertions: {can_view: false, can_edit: false, can_share: false}
+      - user: user:ada
+        object: portfolio:acme-1
+        assertions: {can_view: true, can_edit: true, can_share: true}
+      # An admin of another tenant gets nothing on this tenant's portfolio...
+      - user: user:otto
+        object: portfolio:acme-1
+        assertions: {can_view: false, can_edit: false, can_share: false}
+      # ...but everything on their own.
+      - user: user:otto
+        object: portfolio:other-1
+        assertions: {can_view: true, can_edit: true, can_share: true}
+    list_objects:
+      - user: user:carol
+        type: portfolio
+        assertions:
+          can_view: [portfolio:acme-1]
+          can_edit: []
+      - user: user:ada
+        type: portfolio
+        assertions:
+          can_view: [portfolio:acme-1]
+          can_share: [portfolio:acme-1]

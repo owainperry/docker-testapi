@@ -1,0 +1,28 @@
+model
+  schema 1.1
+
+# Users are keyed on the token's `sub` (Frontegg's user ID): user:<sub>.
+type user
+
+# Tenants are keyed on `q_tenant`. `admin` is never stored: the API sends it with each
+# request as a contextual tuple when the token's `roles` contains "Admin", so Frontegg
+# stays the only place roles are managed.
+type tenant
+  relations
+    define admin: [user]
+
+type portfolio
+  relations
+    # Stored once per portfolio, when it is created.
+    define tenant: [tenant]
+
+    # Direct grants: the tuples the API's /access endpoints write.
+    define owner: [user]
+    define editor: [user] or owner or admin from tenant
+    define viewer: [user] or editor
+
+    # What the API checks. Code asks for permissions, not relations, so the rules
+    # behind them can change here without touching the API.
+    define can_view: viewer
+    define can_edit: editor
+    define can_share: owner or admin from tenant
