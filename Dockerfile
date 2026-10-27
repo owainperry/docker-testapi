@@ -15,12 +15,13 @@ RUN dotnet restore DemoApi/DemoApi.csproj -a $TARGETARCH
 
 COPY DemoApi/ DemoApi/
 
-ARG VERSION=dev
+# Must be a valid NuGet/semver version (e.g. 1.0.42 or 0.0.0-dev): the SDK rejects anything else.
+ARG VERSION=0.0.0-dev
 RUN dotnet publish DemoApi/DemoApi.csproj \
       -c Release \
       -a $TARGETARCH \
       --no-restore \
-      -p:InformationalVersion=${VERSION} \
+      -p:Version=${VERSION} \
       -o /out
 
 # ---- Runtime stage ----

@@ -3,6 +3,8 @@
 
 IMAGE    ?= operry/docker-testapi
 TAG      ?= dev
+# Baked into the assembly; must be valid semver, unlike TAG.
+VERSION  ?= 0.0.0-$(TAG)
 PORT     ?= 8080
 # The API refuses to start without it: make run AUDIENCE=<API_APP_ID>
 AUDIENCE ?= $(Frontegg__Audience)
@@ -27,7 +29,7 @@ token: ## Get a real token: make token APP_ID=<frontegg app id> (secret from FE_
 	@dotnet run --project TokenHelper -- --app-id $(APP_ID)
 
 docker-build: ## Build the image for this machine (IMAGE, TAG)
-	docker buildx build --load --build-arg VERSION=$(TAG) -t $(IMAGE):$(TAG) .
+	docker buildx build --load --build-arg VERSION=$(VERSION) -t $(IMAGE):$(TAG) .
 
 docker-run: check-audience ## Run the image on localhost:PORT, default 8080 (needs AUDIENCE)
 	docker run --rm -p $(PORT):8080 -e Frontegg__Audience=$(AUDIENCE) $(IMAGE):$(TAG)
