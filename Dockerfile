@@ -1,8 +1,3 @@
-# syntax=docker/dockerfile:1
-
-# ---- Build stage ----
-# Runs natively on the builder and cross-publishes for the target architecture, so
-# multi-arch builds do not need emulation.
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 ARG TARGETARCH
