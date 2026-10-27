@@ -304,3 +304,6 @@ Checked against the live environment without a real token, 2026-10-26:
   not relied on: a templated multi-value array would arrive as one string.
 - JSON responses use relaxed escaping so `o'test2@peek.org.uk` comes back as written rather
   than `o'test2…`.
+
+
+ 
